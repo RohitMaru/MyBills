@@ -14,6 +14,11 @@ struct EachWord {
     let description: NSString
 }
 
+struct Product {
+    let name: String
+    let price: CGFloat
+}
+
 class Parser: NSObject {
     //-> Dictionary<AnyHashable, Any>
     func parse(dict: NSDictionary) -> [EachWord] {

@@ -27,7 +27,10 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @IBOutlet weak var billView: UIScrollView!
     
     var fullData = [EachWord]()
-    
+    var numOfLines = 0
+    var lines = [[EachWord]]()
+    var bills = [[EachWord]]()
+
     var googleAPIKey = "AIzaSyB2biVwaSzxzC_BGOqAnGfE-RCE2GRHVM4"
     var googleURL: URL {
         return URL(string: "https://vision.googleapis.com/v1/images:annotate?key=\(googleAPIKey)")!
@@ -58,20 +61,62 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                         if let dict = jsonObj as? NSDictionary {
                             fullData = Parser().parse(dict: dict)
                             DispatchQueue.main.async {
-                                var numOfLines = 0
 //                                var eachLine: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 15))
-//                                var lines = [UIView]()
+                                var eachLine = [EachWord]()
                                 var lineX: CGFloat = 0.0
                                 for eachWord in self.fullData {
                                     if (eachWord.vertex.origin.y - lineX) > 5.0 {
                                         lineX = eachWord.vertex.origin.y
-                                        numOfLines += 1
+                                        self.numOfLines += 1
+                                        self.lines.append(eachLine)
+                                        let lastWord = eachLine.last
+                                        if lastWord?.description == "X" {
+                                            self.bills.append(eachLine)
+                                        }
+                                        eachLine = [EachWord]()
+//                                        eachLine = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 15))
                                     }
-                                    
-                                    self.billView.addSubview(Word(frame: CGRect.zero).drawLabel(word: eachWord))
+                                    eachLine.append(eachWord)
+//                                    eachLine.addSubview(Word(frame: CGRect.zero).drawLabel(word: eachWord))
+//                                    self.billView.addSubview(Word(frame: CGRect.zero).drawLabel(word: eachWord))
                                 }
+//                                for line in lines {
+//                                    self.billView.addSubview(line)
+//                                }
                                 self.billView.contentSize = CGSize(width: 1000, height: 1000)
-                                print("final \(numOfLines)")
+                                print("final \(self.numOfLines)")
+                                print(self.bills)
+                                var products = [Product]()
+                                for eachProduct in self.bills {
+                                    let numOfWords = eachProduct.count - 1
+                                    let xWord = eachProduct[numOfWords]
+                                    let cents = eachProduct[numOfWords - 1]
+                                    let dot = eachProduct[numOfWords - 2]
+                                    let dollars = eachProduct[numOfWords - 3]
+                                    var productName = ""
+                                    for (index, word) in eachProduct.enumerated() {
+                                        if index <= (numOfWords - 5) {
+                                            productName.append("\(word.description) ")
+                                        }
+                                    }
+                                    if let doubleValue = Double("\(dollars.description).\(cents.description)") {
+                                        let amount = CGFloat(doubleValue)
+                                        products.append(Product(name: productName, price: amount))
+                                    }
+                                }
+                                print(products)
+                                
+                                for (index, product) in products.enumerated() {
+                                    let eachLine = Word.drawProduct(product: product)
+                                    var frame = eachLine.frame
+                                    frame.origin.y = CGFloat(Double(index*15) + 70.0)
+                                    if index == 0 {
+                                        frame.origin.y = 70
+                                    }
+                                    eachLine.frame = frame
+                                    self.billView.addSubview(eachLine)
+                                    
+                                }
                             }
                         }
                     }
