@@ -14,7 +14,7 @@
 
 import UIKit
 import SwiftyJSON
-
+import Foundation
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     let imagePicker = UIImagePickerController()
@@ -24,8 +24,11 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @IBOutlet weak var spinner: UIActivityIndicatorView!
     @IBOutlet weak var labelResults: UITextView!
     @IBOutlet weak var faceResults: UITextView!
+    @IBOutlet weak var billView: UIScrollView!
     
-    var googleAPIKey = "YOUR_API_KEY"
+    var fullData = [EachWord]()
+    
+    var googleAPIKey = "AIzaSyB2biVwaSzxzC_BGOqAnGfE-RCE2GRHVM4"
     var googleURL: URL {
         return URL(string: "https://vision.googleapis.com/v1/images:annotate?key=\(googleAPIKey)")!
     }
@@ -44,6 +47,41 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         labelResults.isHidden = true
         faceResults.isHidden = true
         spinner.hidesWhenStopped = true
+        
+        var jsonObj: Any;
+        if let filePath = Bundle.main.path(forResource: "sample", ofType: "json") {
+            do {
+                let dataString = try String(contentsOfFile: filePath)
+                if let data = dataString.data(using: .utf8) {
+                    do {
+                        jsonObj = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+                        if let dict = jsonObj as? NSDictionary {
+                            fullData = Parser().parse(dict: dict)
+                            DispatchQueue.main.async {
+                                var numOfLines = 0
+//                                var eachLine: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 15))
+//                                var lines = [UIView]()
+                                var lineX: CGFloat = 0.0
+                                for eachWord in self.fullData {
+                                    if (eachWord.vertex.origin.y - lineX) > 5.0 {
+                                        lineX = eachWord.vertex.origin.y
+                                        numOfLines += 1
+                                    }
+                                    
+                                    self.billView.addSubview(Word(frame: CGRect.zero).drawLabel(word: eachWord))
+                                }
+                                self.billView.contentSize = CGSize(width: 1000, height: 1000)
+                                print("final \(numOfLines)")
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print(error.localizedDescription)
+            }
+        }
+        
+        
     }
 
     override func didReceiveMemoryWarning() {
@@ -65,6 +103,7 @@ extension ViewController {
             
             // Use SwiftyJSON to parse results
             let json = JSON(data: dataToParse)
+//            let json = JSON(parseJSON)
             let errorObj: JSON = json["error"]
             
             self.spinner.stopAnimating()
@@ -79,6 +118,17 @@ extension ViewController {
             } else {
                 // Parse the response
                 print(json)
+//                if let parsedJSON = json.rawValue as? NSDictionary {
+//                    Parser().parse(dict: parsedJSON)
+//                    let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+//                    if let documentsDirectory = paths.first {
+//                        if let jsonTest = try? JSONSerialization.jsonObject(with: dataToParse, options: []) as? NSDictionary {
+//                            jsonTest?.write(toFile: documentsDirectory.appendingPathComponent("sample.json").path, atomically: true)
+//                        }
+//                    }
+//
+//                }
+                
                 let responses: JSON = json["responses"][0]
                 
                 // Get face annotations
@@ -203,12 +253,7 @@ extension ViewController {
                 ],
                 "features": [
                     [
-                        "type": "LABEL_DETECTION",
-                        "maxResults": 10
-                    ],
-                    [
-                        "type": "FACE_DETECTION",
-                        "maxResults": 10
+                        "type": "DOCUMENT_TEXT_DETECTION",
                     ]
                 ]
             ]
